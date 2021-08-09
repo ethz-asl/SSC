@@ -1,3 +1,4 @@
+ #!/usr/bin/env python3
 from utils.seed import seed_torch
 import os
 
@@ -14,7 +15,21 @@ import datetime
 from models import make_model
 import config
 
+
 import VoxelUtils as vu
+
+import rospy
+from std_msgs.msg import String
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import MultiArrayDimension
+from cv_bridge import CvBridge
+import message_filters
+import tf.transformations as tr
+import tf
+
+from ssc_msgs.msg import SSCGrid
 
 parser = argparse.ArgumentParser(description='PyTorch SSC Inference')
 parser.add_argument('--dataset', type=str, default='nyu', choices=['nyu', 'nyucad', 'debug'],
@@ -30,7 +45,70 @@ parser.add_argument('--model_name', default='SSC_debug', type=str, help='name of
 global args
 args = parser.parse_args()
 
+global net
+net = make_model(args.model, num_classes=12).cuda() 
+
+#os.environ["ROS_MASTER_URI"] = "http://b40783fe319d.ngrok.io:80"
+
+rospy.init_node("scene_completion")
+
+listener = tf.TransformListener()
+pub = rospy.Publisher('ssc', Float32MultiArray, queue_size=10)
+bridge = CvBridge()
+
 seed_torch(2021)
+
+def callback(depth_image):
+    print("callback received")
+    torch.cuda.empty_cache()
+    cv_image = bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
+    position, orientation = listener.lookupTransform('/odom', '/airsim_drone/Depth_cam', depth_image.header.stamp)
+    pose_matrix = tr.quaternion_matrix(orientation)
+    pose_matrix[0:3, -1] = position
+    rgb, depth, tsdf, position, occupancy_grid = load_data_from_depth_image(cv_image, pose_matrix)
+    #pub.publish("hello world")
+        
+    # ---- (bs, C, D, H, W), channel first for Conv3d in pyTorch
+    # FloatTensor to Variable. (bs, channels, 240L, 144L, 240L)
+    x_depth = Variable(depth.float()).cuda() 
+    position = position.long().cuda() 
+
+    
+    if args.model == 'palnet':
+        x_tsdf = Variable(tsdf.float()).cuda() 
+        y_pred = net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
+    else:
+        x_rgb = Variable(rgb.float())
+        y_pred = net(x_depth=x_depth, x_rgb=x_rgb, p=position)
+
+    
+    scores = torch.nn.Softmax(dim=0)(y_pred.view(1,12,-1)[0])
+    scores[0] += 0.3 #Increase offset of empty class to weed out low prob predictions
+    pred_cls = torch.argmax(scores, dim=0)
+
+    pred_cls = pred_cls.reshape(1,60,36,60)
+    pred_cls = pred_cls[0].cpu().numpy()
+    
+    msg = Float32MultiArray()
+    msg.data  = pred_cls.reshape(-1).astype(np.float32).tolist()#np.arange(60*36*60).tolist()#pred_cls.astype(np.float32).tolist() #pred_cls.reshape(-1)
+
+    # create two dimensions in the dim array
+    msg.layout.dim = [MultiArrayDimension(), MultiArrayDimension(),MultiArrayDimension()]
+
+    # dim[0] is the vertical dimension of your matrix
+    msg.layout.dim[0].label = "height"
+    msg.layout.dim[0].size = 60
+    msg.layout.dim[0].stride = 60*36*60
+    # dim[1] is the horizontal dimension of your matrix
+    msg.layout.dim[1].label = "width"
+    msg.layout.dim[1].size = 36
+    msg.layout.dim[1].stride = 36*60
+
+    msg.layout.dim[2].label = "depth"
+    msg.layout.dim[2].size = 60
+    msg.layout.dim[2].stride = 60
+
+    pub.publish(msg)
 
 def _get_xyz(size):
         """x width yheight  zdepth"""
@@ -284,20 +362,20 @@ def get_origin_from_depth_image(depth, cam_k, cam_pose):
     vox_origin = pt_world.min(axis=(0,1))
     return vox_origin
 
-def load_data_from_depth_image(filename):
-    filename="/home/mcheem/data/datasets/large_room/frame_174.png"
-    #filename="/Data/datasets/asl/run1/000041_depth.tiff"
-    #depth = imageio.imread(filename)
-    #depth = np.asarray(depth/ 8000.0)  # numpy.float64
-    # assert depth.shape == (img_h, img_w), 'incorrect default size'
-    #depth = np.asarray(depth)
-    #depth = np.asarray(depth)
+def load_data_from_depth_image(depth, cam_pose0):
+    # filename="/home/mcheem/data/datasets/large_room/frame_174.png"
+    # #filename="/Data/datasets/asl/run1/000041_depth.tiff"
+    # #depth = imageio.imread(filename)
+    # #depth = np.asarray(depth/ 8000.0)  # numpy.float64
+    # # assert depth.shape == (img_h, img_w), 'incorrect default size'
+    # #depth = np.asarray(depth)
+    # #depth = np.asarray(depth)
     rgb = None
-    frame_data = np.load(filename[:-4] + ".npz")
-    depth_npy = frame_data["depth"]
-    cam_pose0 = frame_data["pose"]
+    # frame_data = np.load(filename[:-4] + ".npz")
+    # depth_npy = frame_data["depth"]
+    # cam_pose0 = frame_data["pose"]
     
-
+    depth_npy = np.array(depth)
     #depth[depth>8] = depth.min()
     depth_npy[depth_npy>8] = depth_npy.min()
     # with open(filename[:-10] + "pose.txt") as f:
@@ -327,9 +405,8 @@ def load_data_from_depth_image(filename):
     return rgb, torch.as_tensor(depth_npy).unsqueeze(0).unsqueeze(0), torch.as_tensor(vox_tsdf).unsqueeze(0), torch.as_tensor(depth_mapping_idxs).unsqueeze(0).unsqueeze(0), torch.as_tensor(voxel_occupancy.transpose(2,1,0)).unsqueeze(0)
 
 
-def infer():
-    net = make_model(args.model, num_classes=12).cuda() 
-
+def load_network():
+    
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -339,40 +416,8 @@ def infer():
             raise Exception("=> NO checkpoint found at '{}'".format(args.resume))
 
 
-    net.eval()  # switch to train mode
-    torch.cuda.empty_cache()
+    net.eval()  # switch to test mode 
     
-    #file_list = os.listdir(args.files)
-    file_list = glob.glob(str(Path(args.files) / "*.npz"))
-    
-    for step, depth_file in enumerate(file_list):
-        rgb, depth, tsdf, position, occupancy_grid = load_data_from_depth_image(depth_file)
-        
-        # ---- (bs, C, D, H, W), channel first for Conv3d in pyTorch
-        # FloatTensor to Variable. (bs, channels, 240L, 144L, 240L)
-        x_depth = Variable(depth.float()).cuda() 
-        position = position.long().cuda() 
-
-        if args.model == 'palnet':
-            x_tsdf = Variable(tsdf.float()).cuda() 
-            y_pred = net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
-        else:
-            x_rgb = Variable(rgb.float())
-            y_pred = net(x_depth=x_depth, x_rgb=x_rgb, p=position)
-
-        
-        scores = torch.nn.Softmax(dim=0)(y_pred.view(1,12,-1)[0])
-        scores[0] += 0.3 #Increase offset of empty class to weed out low prob predictions
-        pred_cls = torch.argmax(scores, dim=0)
-
-        pred_cls = pred_cls.reshape(1,60,36,60)
-
-        #labeled_voxel2ply(target[0].numpy(),"outputs_thresh/target{}.ply".format(step))
-        labeled_voxel2ply(pred_cls[0].cpu().numpy(),"outputs/{}_preds.ply".format(Path(depth_file).stem))
-        occupancy_grid_downsampled = _downsample_label(occupancy_grid[0].numpy())
-        labeled_voxel2ply(occupancy_grid_downsampled,"outputs/{}_scan.ply".format(Path(depth_file).stem))
-        break
-       
 
 def main():
     # ---- Check CUDA
@@ -381,7 +426,12 @@ def main():
     else:
         print("Using CPU!")
 
-    infer()
+    load_network()
+
+    #pose_sub = message_filters.Subscriber('/airsim_drone/ground_truth/pose', PoseStamped)
+    rospy.Subscriber('/airsim_drone/Depth_cam', Image, callback)
+
+    rospy.spin()
 
 
 if __name__ == '__main__':
