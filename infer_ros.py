@@ -53,7 +53,7 @@ net = make_model(args.model, num_classes=12).cuda()
 rospy.init_node("scene_completion")
 
 listener = tf.TransformListener()
-pub = rospy.Publisher('ssc', Float32MultiArray, queue_size=10)
+pub = rospy.Publisher('ssc', SSCGrid, queue_size=10)
 bridge = CvBridge()
 
 seed_torch(2021)
@@ -65,12 +65,17 @@ def callback(depth_image):
     position, orientation = listener.lookupTransform('/odom', '/airsim_drone/Depth_cam', depth_image.header.stamp)
     pose_matrix = tr.quaternion_matrix(orientation)
     pose_matrix[0:3, -1] = position
-    rgb, depth, tsdf, position, occupancy_grid = load_data_from_depth_image(cv_image, pose_matrix)
+    vox_origin, rgb, depth, tsdf, position, occupancy_grid = load_data_from_depth_image(cv_image, pose_matrix)
     #pub.publish("hello world")
         
     # ---- (bs, C, D, H, W), channel first for Conv3d in pyTorch
     # FloatTensor to Variable. (bs, channels, 240L, 144L, 240L)
-    x_depth = Variable(depth.float()).cuda() 
+    try:
+        x_depth = Variable(depth.float()).cuda() 
+    
+    except Exception as e:
+        print ("Error!",e)
+        pass
     position = position.long().cuda() 
 
     
@@ -86,29 +91,27 @@ def callback(depth_image):
     scores[0] += 0.3 #Increase offset of empty class to weed out low prob predictions
     pred_cls = torch.argmax(scores, dim=0)
 
-    pred_cls = pred_cls.reshape(1,60,36,60)
+    pred_cls = pred_cls.reshape(1, 60,36,60)
     pred_cls = pred_cls[0].cpu().numpy()
     
-    msg = Float32MultiArray()
-    msg.data  = pred_cls.reshape(-1).astype(np.float32).tolist()#np.arange(60*36*60).tolist()#pred_cls.astype(np.float32).tolist() #pred_cls.reshape(-1)
+    #setup message
+    msg = SSCGrid()
+    msg.data  = pred_cls.reshape(-1).astype(np.float32).tolist()
+    
+    msg.origin_x = vox_origin[0]
+    msg.origin_y = vox_origin[1]
+    msg.origin_z = vox_origin[2]
+    msg.frame = 'odom'
 
-    # create two dimensions in the dim array
-    msg.layout.dim = [MultiArrayDimension(), MultiArrayDimension(),MultiArrayDimension()]
-
-    # dim[0] is the vertical dimension of your matrix
-    msg.layout.dim[0].label = "height"
-    msg.layout.dim[0].size = 60
-    msg.layout.dim[0].stride = 60*36*60
-    # dim[1] is the horizontal dimension of your matrix
-    msg.layout.dim[1].label = "width"
-    msg.layout.dim[1].size = 36
-    msg.layout.dim[1].stride = 36*60
-
-    msg.layout.dim[2].label = "depth"
-    msg.layout.dim[2].size = 60
-    msg.layout.dim[2].stride = 60
-
+    msg.width = pred_cls.shape[0]
+    msg.height= pred_cls.shape[1]
+    msg.depth = pred_cls.shape[2]
+    
+    # publish message
     pub.publish(msg)
+
+    #save prediction
+    labeled_voxel2ply(pred_cls,"outputs/pred.ply")
 
 def _get_xyz(size):
         """x width yheight  zdepth"""
@@ -402,7 +405,7 @@ def load_data_from_depth_image(depth, cam_pose0):
     #np.set_printoptions(suppress=True)
     #print(cam_pose)
     #print (cam_pose0)
-    return rgb, torch.as_tensor(depth_npy).unsqueeze(0).unsqueeze(0), torch.as_tensor(vox_tsdf).unsqueeze(0), torch.as_tensor(depth_mapping_idxs).unsqueeze(0).unsqueeze(0), torch.as_tensor(voxel_occupancy.transpose(2,1,0)).unsqueeze(0)
+    return vox_origin, rgb, torch.as_tensor(depth_npy).unsqueeze(0).unsqueeze(0), torch.as_tensor(vox_tsdf).unsqueeze(0), torch.as_tensor(depth_mapping_idxs).unsqueeze(0).unsqueeze(0), torch.as_tensor(voxel_occupancy.transpose(2,1,0)).unsqueeze(0)
 
 
 def load_network():
