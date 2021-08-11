@@ -1,9 +1,7 @@
-*.tar
 venv
 *__pycache__*
 *.log
 *.a
-weights
 logs
 outputs*
 build

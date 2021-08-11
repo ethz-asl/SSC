@@ -1,0 +1,210 @@
+
+================================
+     EXPERIMENTS
+================================
+
+Experimant 1
+---------------
+
+Config:
+
+Results:
+Validate with TSDF:epoch 5, p 57.5, r 92.5, IoU 54.7
+pixel-acc 49.4788, mean IoU 19.5, SSC IoU:[35.3 16.3 92.  27.4  0.   0.  43.8  4.7  0.4  0.  22.2  8. ]
+
+
+Commands:
+python ./main.py \
+--model='palnet' \
+--dataset=nyu \
+--epochs=5 \
+--batch_size=1 \
+--workers=1 \
+--lr=0.01 \
+--lr_adj_n=1 \
+--lr_adj_rate=0.1 \
+--model_name='SSC_PalNet' 2>&1 |tee train_PalNet_NYU_001.log
+
+Log: /home/mcheem/code/SSC/train_PalNet_NYU_001.log
+
+Checkpoints:
+
+/home/mcheem/code/SSC/weights/001/
+
+Notes:
+
+Dilated Convolution with 4x4 filter size for projected 2D extracted  features instead of 7x7 . Pool1 layer in Palnet.Py
+
+Experimant 2
+---------------
+
+Config:
+
+Results:
+Validate with TSDF:epoch 5, p 60.8, r 88.5, IoU 55.8
+pixel-acc 52.4582, mean IoU 18.7, SSC IoU:[41.8 17.4 87.6 26.6  0.   0.  43.5  1.4  0.7  0.  21.5  7. ]
+
+
+Commands:
+python ./main.py \
+--model='palnet' \
+--dataset=nyu \
+--epochs=5 \
+--batch_size=1 \
+--workers=0 \
+--lr=0.01 \
+--lr_adj_n=1 \
+--lr_adj_rate=0.1 \
+--model_name='SSC_PalNet' 2>&1 |tee train_PalNet_NYU_002.log
+
+Log: /home/mcheem/code/SSC/logs/train_PalNet_NYU_002.log
+
+Checkpoints:
+
+/home/mcheem/code/SSC/weights/002/
+
+Notes:
+
+Standard Convolution on projected 2D extracted  features using filters of 7x7 . Pool1 layer in Palnet.Py
+
+
+Experimant 3
+---------------
+
+Type:
+DDRNET
+
+Config:
+
+Results:
+Validate with TSDF:epoch 5, p 57.5, r 91.8, IoU 54.5
+pixel-acc 49.9605, mean IoU 18.8, SSC IoU:[35.9 10.  91.7 27.6  0.   4.6 44.9  0.   1.6  0.  21.9  4.8]
+
+
+Commands:
+python ./main.py \
+--model='ddrnet' \
+--dataset=nyu \
+--epochs=5 \
+--batch_size=1 \
+--workers=0 \
+--lr=0.01 \
+--lr_adj_n=1 \
+--lr_adj_rate=0.1 \
+--model_name='SSC_DDRNet' 2>&1 |tee train_DDRNet_NYU_003.log
+
+Log: /home/mcheem/code/SSC/logs/train_PalNet_NYU_003.log
+
+Checkpoints:
+
+/home/mcheem/code/SSC/weights/003/
+
+Notes:
+
+
+Experiment 4
+----------------
+
+Type:
+DDRNET
+
+Notes:
+check if increasing batch size helps
+
+COnclusion:
+Increasing batch size decreased mIOU and IOU.
+
+
+Experiment 6
+--------------
+
+Type:
+PALNET
+
+BatchSize: 4
+
+Notes:
+Updated the 2D to 3D mapping and tried to train for longer to see if it helps.
+
+Conclusion:
+Results not improved as rapidly as using batch size 1 and using the packaged 2d-3d mapping. Eventually results got better in later epochs probably because of longer training.
+
+Note(Update):
+The code used earlier 2D to 3D mapping. Dataset not corrected as apparently the code to transform to y,z,x was left unchanged to just x,z,y (like previous versions and in the cloned initial code)
+
+
+Experiment 7
+--------------
+
+Type:
+PALNET
+
+Notes:
+Updated the 2D to 3D mapping and tried to train for longer to see if it helps. Also transposed the TSDF using torch.permute(0,3,2,1)
+
+Conclusion:
+Results got way worse. COuld not get past IOU of ~30 during 6 epochs. Training stopped.
+
+
+Experiment 8
+--------------
+
+Type:
+PALNET
+
+Notes:
+Resetted the 2D to 3D mapping to orignal and removed the tsdf transpose. Only the batch size is 1 and trained the orignal code for longer to compare with experiment 6 that used fixed 2d to 3d mapping(Its the same with just batch size 1 as the apparent fix in the 2D to 3D mapping was not applied on the fixed dataset- refer to Experiment 6).
+
+Conclusion:
+Results were great. Got 24.4 semantic IOU ( mIoU 24.413163011724297% in epoch 30). Weights saved in weights/008.
+
+Experiment 9
+--------------
+
+Type:
+CCPNet
+
+Notes:
+Implemented CCPNet frons scratch and used it for training according to the optimization settings mentionened in the paper.
+
+Conclusion:
+Unstable training. Parameters 99k. > 250 TFLOPS. In paper they mention 11 TFLOPS. Logs in logs/train_CCPNet_NYU_009.log
+
+
+Experiment 10
+--------------
+
+Type:
+PALNet
+
+Notes:
+Given observations that the TSDF input during inference is ignored as the weight is very small compared to RGB branch, this was tested to verify speed up in training/inference by removing the TSDF branch. The channels of depth block was increased from 32 to 64 using 1x1 conv which previouly combined 32 channels for tsdf features and 32 channels for depth features to get 64 channels.
+
+
+Results
+-----------
+Validate with TSDF:epoch 19, p 58.6, r 92.1, IoU 55.5
+pixel-acc 53.7213, mean IoU 23.9, SSC IoU:[37.8 15.6 92.  28.   0.  10.4 40.  33.5  7.7  0.  26.5  9.6]
+
+Conclusion:
+Results almost less than equal-to experiment 8 where the TSDF branch is present. The training time is reduced from 16 min/epoch to 12:09 min / epoch and inference time is 8.52 frames/sec.
+
+Experiment 11
+--------------
+
+Type:
+PALNet
+
+Results:
+mIoU 23.50871996446089%
+Validate with TSDF:epoch 27, p 56.8, r 93.5, IoU 54.5
+pixel-acc 51.4140, mean IoU 23.5, SSC IoU:[34.1 15.8 91.8 28.   0.   7.8 42.5 31.2  6.9  0.  25.1  9.5]
+ 
+Notes:
+Used separated convolutions in the conv3d layers to reduce parameters and speed up training/inference
+
+Conclusion:
+Significant reduction in training with an epoch taking 6:08 minutes. The imporvement is observed using Pytorch 1.9 cuda 11.1 but only in training as inference is actually a bit slower (may be conv3d forward needs optimization). The performance is worse using pytorch 1.4.0.
+...
+
+
