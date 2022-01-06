@@ -90,7 +90,7 @@ pyhton setup.py install
 ```
 python infer_ros.py --model palnet --resume trained_model.pth
 ```
-A pretreined model can be download from [here.](https://github.com/ethz-asl/SSC/blob/experiment008/weights/008/cpBest_SSC_PALNet.pth.tar)
+A pretreined model can be download from [here.](https://github.com/ethz-asl/SSC/blob/experiment008/pretrained_models/weights/Experiment008/cpBest_SSC_PALNet.pth.tar)
 
 > **_NOTE:_** Make sure to activate catkin workspace before starting  inference. 
 
