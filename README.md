@@ -88,13 +88,17 @@ pyhton setup.py install
 
 ### Launching Scene Completion ROS node
 ```
-rosrun ssc_network infer_ros.py
+python infer_ros.py --model palnet --resume trained_model.pth
 ```
+A pretreined model can be download from [here.](https://github.com/ethz-asl/SSC/blob/experiment008/weights/008/cpBest_SSC_PALNet.pth.tar)
+
+> **_NOTE:_** Make sure to activate catkin workspace before starting  inference. 
+
 
 
 ## Credits
 
-The Semantic Scene Completion Networks is adapted from PALNet and DDRNet. The cite the respective papers: 
+The Semantic Scene Completion Networks are adapted from PALNet and DDRNet. Please cite the respective papers: 
 
     @InProceedings{Li2019ddr,
         author    = {Li, Jie and Liu, Yu and Gong, Dong and Shi, Qinfeng and Yuan, Xia and Zhao, Chunxia and Reid, Ian},
