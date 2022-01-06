@@ -1,28 +1,15 @@
 # Semantic Scene Completion
+**A 3D Convolutional Neural Network for semantic scene completions from depth maps**
+![3d_palnet_cnn](https://user-images.githubusercontent.com/10983181/148416145-ecc6f019-f7a2-47c1-9c30-6b0261cd4d89.png)
 
-## This repo contains code for the following papers
-- AICNet (CVPR2020): [Anisotropic Convolutional Networks for 3D Semantic Scene Completion](http://openaccess.thecvf.com/content_CVPR_2020/papers/Li_Anisotropic_Convolutional_Networks_for_3D_Semantic_Scene_Completion_CVPR_2020_paper.pdf)
-- DDRNet (CVPR2019): [RGBD Based Dimensional Decomposition Residual Network for 3D Semantic Scene Completion](http://openaccess.thecvf.com/content_CVPR_2019/papers/Li_RGBD_Based_Dimensional_Decomposition_Residual_Network_for_3D_Semantic_Scene_CVPR_2019_paper.pdf)
-- PALNet (RAL2019): [Depth Based Semantic Scene Completion with Position Importance Aware Loss](https://ieeexplore.ieee.org/document/8902045)
-
-<p align="center">
-<img src='teaser_480p.gif' height="280" >
-</p>
-
-
-## Contents
+## Table of Contents
 0. [Installation](#installation)
 0. [Data Preparation](#Data-Preparation)
 0. [Train and Test](#Train-and-Test)
-0. [Visualization and Evaluation](#visualization-and-evaluation)
-0. [Citation](#Citation)
+0. [Inference (ROS)](#Inference)
+0. [Credits](#Credits)
 
 ## Installation
-### Environment
-- Ubuntu 16.04
-- python 3.6
-- CUDA 10.1
-
 ### Requirements:
 - [pytorch](https://pytorch.org/)≥1.4.0
 - [torch_scatter](https://github.com/rusty1s/pytorch_scatter)
@@ -81,21 +68,33 @@ Edit the testing script [run_SSC_test.sh](https://github.com/waterljwant/SSC/blo
 bash run_SSC_test.sh
 ```
 
-## Visualization and Evaluation
+## Inference
+The SSC Network is deployed as ROS node for scene completions from depth topics. Please follow the follow instructuon for setting up ROS scene completion node.
+### Pre-Requisites
+* [**ROS**](http://wiki.ros.org/ROS/Installation)
+* **Voxel Utils**
 
-comging soon
+   A python library developed for this project. It provides optimized implementation for:
+     - GPU based TSDF computation
+     - 3D projection indices from a 2D depth image
+> **_NOTE:_**  Voxel Utils extension requires CUDA 10.2 for compiling backend C++/CUDA based shared library.
+
+Install the python extension VoxelUtils package for inference on depth images from ROS topics:
+```
+cd voxel_utils
+make
+pyhton setup.py install
+```
+
+### Launching Scene Completion ROS node
+```
+rosrun ssc_network infer_ros.py
+```
 
 
-## Citation
+## Credits
 
-If you find this work useful in your research, please cite our paper(s):
-
-    @inproceedings{Li2020aicnet,
-      author     = {Jie Li, Kai Han, Peng Wang, Yu Liu, and Xia Yuan},
-      title      = {Anisotropic Convolutional Networks for 3D Semantic Scene Completion},
-      booktitle  = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
-      year       = {2020},
-    }
+The Semantic Scene Completion Networks is adapted from PALNet and DDRNet. The cite the respective papers: 
 
     @InProceedings{Li2019ddr,
         author    = {Li, Jie and Liu, Yu and Gong, Dong and Shi, Qinfeng and Yuan, Xia and Zhao, Chunxia and Reid, Ian},
