@@ -75,9 +75,9 @@ The SSC Network is deployed as ROS node for scene completions from depth topics.
 * **VoxelUtils** (https://github.com/mansoorcheema/VoxelUtils)
 
    A python library providing optimized C++ (optionally CUDA accelerated) backend implementations for:
-     - TSDF volume computation from depth scans
-     - 3D Grid based Volumetric Probabilistic Fusion
-     - 3D projection indices from a 2D depth image
+     - Fixed size TSDF volume computation from a single depth image
+     - Fixed size 3D Volumetric grid computation by probabilistically fusing pointcloud (for SCFusion)
+     - 3D projection indices from a 2D depth image 
 > **_NOTE:_**  A CUDA only depracated version is available in `voxel_utils` directory.
 
 Install the python extension VoxelUtils package for inference on depth images from ROS topics:
