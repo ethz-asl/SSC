@@ -1,2 +1,0 @@
-/home/mcheem/code/SSC/venv/lib/python3.6/site-packages/VoxelUtils.cpython-36m-x86_64-linux-gnu.so
-/home/mcheem/code/SSC/venv/lib/python3.6/site-packages/VoxelUtils-1.0.egg-info

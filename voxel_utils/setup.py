@@ -12,13 +12,19 @@ else:
    CUDA_PATH = "/usr/local/cuda"
 
 if not os.path.isdir(CUDA_PATH):
-   print("CUDA_PATH {} not found. Please update the CUDA_PATH variable and rerun".format(CUDA_PATH))
-   exit(0)
-
-setup(name = 'VoxelUtils', version = '1.0',  \
-   ext_modules = [
-      Extension('VoxelUtils', ['voxel_util_module.c'], 
-      include_dirs=[np.get_include(), os.path.join(CUDA_PATH, "include")],
-      libraries=["voxelutil", "cudart"],
-      library_dirs = [".", os.path.join(CUDA_PATH, "lib64")]
-)])
+   print("CUDA_PATH {} not found. Switching to CPU!")
+   setup(name = 'VoxelUtils', version = '1.0',  \
+      ext_modules = [
+         Extension('VoxelUtils', ['voxel_util_module.c'], 
+         include_dirs=[np.get_include()],
+         libraries=["voxelutil"],
+         library_dirs = ["."]
+   )])
+else:
+   setup(name = 'VoxelUtils', version = '1.0',  \
+      ext_modules = [
+         Extension('VoxelUtils', ['voxel_util_module.c'], 
+         include_dirs=[np.get_include(), os.path.join(CUDA_PATH, "include")],
+         libraries=["voxelutil", "cudart"],
+         library_dirs = [".", os.path.join(CUDA_PATH, "lib64")]
+   )])
