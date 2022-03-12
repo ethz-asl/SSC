@@ -72,12 +72,13 @@ bash run_SSC_test.sh
 The SSC Network is deployed as ROS node for scene completions from depth topics. Please follow the follow instructuon for setting up ROS scene completion node.
 ### Pre-Requisites
 * [**ROS**](http://wiki.ros.org/ROS/Installation)
-* **Voxel Utils**
+* **VoxelUtils**
 
-   A python library developed for this project. It provides optimized implementation for:
-     - GPU based TSDF computation
+   A python library developed for this project available at`VoxelUtils`(https://github.com/mansoorcheema/VoxelUtils). It provides optimized C++ (optionally CUDA accelerated) implementation for:
+     - TSDF volume computation from depth scans
+     - 3D Grid based Volumetric Probabilistic Fusion
      - 3D projection indices from a 2D depth image
-> **_NOTE:_**  Voxel Utils extension requires CUDA 10.2 for compiling backend C++/CUDA based shared library.
+> **_NOTE:_**  A CUDA only depracated version is available in `voxel_utils` directory.
 
 Install the python extension VoxelUtils package for inference on depth images from ROS topics:
 ```
