@@ -34,8 +34,7 @@
             "request": "launch",
             "python":"${workspaceFolder}/venv/bin/python",
             "program": "${workspaceFolder}/infer_ros.py",
-            "env": {"PYTHONPATH": "${workspaceFolder}${pathSeparator}/home/mcheem/catkin_ws/devel/lib/python2.7/dist-packages${pathSeparator}${env:PYTHONPATH}"},
-            "args" : ["--model=palnet", "--dataset=nyu","--model_name=SSC_PalNet", "--resume=weights/008/cpBest_SSC_PALNet.pth.tar", "--files=/home/mcheem/data/datasets/large_room/"]
+            "args" : ["--model=palnet", "--resume=pretrained_models/weights/Experiment008/cpBest_SSC_PALNet.pth.tar"]
         }
     ]
 }

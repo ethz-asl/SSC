@@ -18,6 +18,7 @@ if not os.path.isdir(CUDA_PATH):
          Extension('VoxelUtils', ['voxel_util_module.c'], 
          include_dirs=[np.get_include()],
          libraries=["voxelutil"],
+         extra_link_args = ["-fopenmp"],
          library_dirs = ["."]
    )])
 else:
