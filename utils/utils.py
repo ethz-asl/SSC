@@ -27,7 +27,7 @@ def compute_tsdf(depth_data, vox_origin, cam_k, cam_pose0, voxel_size=(240,144,2
     # setup voxel info
     vox_info = np.zeros(8,dtype=np.float64)
     vox_info[0] = 0.02; # vox unit
-    vox_info[1] = 0.02; # vox margin
+    vox_info[1] = 0.04; # vox margin of two voxels
 
     for i in range(3):
         vox_info[i + 2] = voxel_size[i]
