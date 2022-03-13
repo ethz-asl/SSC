@@ -71,6 +71,7 @@ void tsdfTransform(double* vox_info, double* vox_tsdf) {
 
     size_t num_voxels = vox_size[0] * vox_size[1] * vox_size[2];
 
+    #pragma omp parallel for
     for (size_t vox_idx = 0; vox_idx < num_voxels; ++vox_idx) {
         double value = double(vox_tsdf[vox_idx]);
 
@@ -84,126 +85,224 @@ void tsdfTransform(double* vox_info, double* vox_tsdf) {
     }
 }
 
+// void calculateProjectedTSDF(double* cam_info, double* vox_info, double* depth_data, double* vox_binary,
+//                               double* vox_tsdf) {
+//     // Get camera information
+//     int frame_width = cam_info[0];
+//     int frame_height = cam_info[1];
+//     double cam_K[9];
+//     for (int i = 0; i < 9; ++i) cam_K[i] = cam_info[i + 2];
+//     double cam_pose[16];
+//     for (int i = 0; i < 16; ++i) cam_pose[i] = cam_info[i + 11];
 
-void SquaredDistanceTransform(double* cam_info, double* vox_info, double* depth_data, double* vox_binary,
+//     // Get voxel volume parameters
+//     double vox_unit = vox_info[0];
+//     double vox_margin = vox_info[1];
+
+//     int vox_size[3];
+//     for (int i = 0; i < 3; ++i) vox_size[i] = vox_info[i + 2];
+//     double vox_origin[3];
+//     for (int i = 0; i < 3; ++i) vox_origin[i] = vox_info[i + 5];
+
+//     int search_region = (int)round(vox_margin / vox_unit);
+
+// // Get point in world coordinate
+// #pragma omp parallel for
+//     for (size_t pixel_x = 0; pixel_x < frame_width; pixel_x++) {
+//         for (size_t pixel_y = 0; pixel_y < frame_height; pixel_y++) {
+//             double point_depth = depth_data[pixel_y * frame_width + pixel_x];
+
+//             double point_cam[3] = {0};
+//             point_cam[0] = (pixel_x - cam_K[2]) * point_depth / cam_K[0];
+//             point_cam[1] = (pixel_y - cam_K[5]) * point_depth / cam_K[4];
+//             point_cam[2] = point_depth;
+
+//             double point_base[3] = {0};
+
+//             point_base[0] = cam_pose[0 * 4 + 0] * point_cam[0] + cam_pose[0 * 4 + 1] * point_cam[1] +
+//                             cam_pose[0 * 4 + 2] * point_cam[2];
+//             point_base[1] = cam_pose[1 * 4 + 0] * point_cam[0] + cam_pose[1 * 4 + 1] * point_cam[1] +
+//                             cam_pose[1 * 4 + 2] * point_cam[2];
+//             point_base[2] = cam_pose[2 * 4 + 0] * point_cam[0] + cam_pose[2 * 4 + 1] * point_cam[1] +
+//                             cam_pose[2 * 4 + 2] * point_cam[2];
+
+//             point_base[0] = point_base[0] + cam_pose[0 * 4 + 3];
+//             point_base[1] = point_base[1] + cam_pose[1 * 4 + 3];
+//             point_base[2] = point_base[2] + cam_pose[2 * 4 + 3];
+
+//             // World coordinate to grid coordinate
+//             int z = (int)floor((point_base[0] - vox_origin[0]) / vox_unit);
+//             int x = (int)floor((point_base[1] - vox_origin[1]) / vox_unit);
+//             int y = (int)floor((point_base[2] - vox_origin[2]) / vox_unit);
+
+//             //double point_depth = depth_data[pixel_y * frame_width + pixel_x];
+//             if (point_depth < double(0.5f) || point_depth > double(8.0f)) {
+//                 continue;
+//             }
+
+//             size_t vox_idx = z * vox_size[0] * vox_size[1] + y * vox_size[0] + x;
+//             size_t num_voxels = vox_size[0] * vox_size[1] * vox_size[2];
+
+//             if (vox_idx < 0 || vox_idx >= num_voxels) {
+//                 continue;
+//             }
+
+//             if (roundf(point_depth) == 0) {  // mising depth
+//                 vox_tsdf[vox_idx] = double(-1.0);
+//                 continue;
+//             }
+
+//             // Get depth difference
+//             double sign;
+//             if (abs(point_depth - point_cam[2]) < 0.0001) {
+//                 sign = 1;  // avoid NaN
+//             } else {
+//                 sign = (point_depth - point_cam[2]) / abs(point_depth - point_cam[2]);
+//             }
+//             vox_tsdf[vox_idx] = double(sign)
+//             //WIP
+//             // for (int iix = std::max(0, x - search_region); iix < std::min((int)vox_size[0], x + search_region + 1);
+//             //      iix++) {
+//             //     for (int iiy = std::max(0, y - search_region); iiy < std::min((int)vox_size[1], y + search_region + 1);
+//             //          iiy++) {
+//             //         for (int iiz = std::max(0, z - search_region);
+//             //              iiz < std::min((int)vox_size[2], z + search_region + 1); iiz++) {
+//             //             int iidx = iiz * vox_size[0] * vox_size[1] + iiy * vox_size[0] + iix;
+//             //             if (vox_binary[iidx] > 0) {
+//             //                 double xd = std::abs(x - iix);
+//             //                 double yd = std::abs(y - iiy);
+//             //                 double zd = std::abs(z - iiz);
+//             //                 double tsdf_value = sqrtf(xd * xd + yd * yd + zd * zd) / (double)search_region;
+//             //                 if (tsdf_value < std::abs(vox_tsdf[vox_idx])) {
+//             //                     vox_tsdf[vox_idx] = double(tsdf_value * sign);
+//             //                 }
+//             //             }
+//             //         }
+//             //     }
+//             // }
+//         }
+//     }
+// }
+
+void squaredDistanceTransform(double* cam_info, double* vox_info, double* depth_data, double* vox_binary,
                               double* vox_tsdf) {
     // Get voxel volume parameters
-    // double vox_unit = vox_info[0];
-    // double vox_margin = vox_info[1];
-    // int vox_size[3];
-    // double vox_origin[3];
+    double vox_unit = vox_info[0];
+    double vox_margin = vox_info[1];
+    int vox_size[3];
+    double vox_origin[3];
 
-    // // load voxel size from parameter array
-    // for (int i = 0; i < 3; ++i) {
-    //     vox_size[i] = vox_info[i + 2];
-    // }
+    // load voxel size from parameter array
+    for (int i = 0; i < 3; ++i) {
+        vox_size[i] = vox_info[i + 2];
+    }
 
-    // // load voxel origin from parameter array
-    // for (int i = 0; i < 3; ++i) {
-    //     vox_origin[i] = vox_info[i + 5];
-    // }
+    // load voxel origin from parameter array
+    for (int i = 0; i < 3; ++i) {
+        vox_origin[i] = vox_info[i + 5];
+    }
 
-    // int frame_width = cam_info[0];
-    // int frame_height = cam_info[1];
+    int frame_width = cam_info[0];
+    int frame_height = cam_info[1];
 
-    // // load camera parameters
-    // const unsigned int CAMERA_INTRINSIC_MATRIX_SIZE = 9;
-    // const unsigned int CAMERA_POSE_MATRIX_SIZE = 16;
+    // load camera parameters
+    const unsigned int CAMERA_INTRINSIC_MATRIX_SIZE = 9;
+    const unsigned int CAMERA_POSE_MATRIX_SIZE = 16;
 
-    // double cam_K[CAMERA_INTRINSIC_MATRIX_SIZE];
-    // double cam_pose[CAMERA_POSE_MATRIX_SIZE];
+    double cam_K[CAMERA_INTRINSIC_MATRIX_SIZE];
+    double cam_pose[CAMERA_POSE_MATRIX_SIZE];
 
-    // for (int i = 0; i < CAMERA_INTRINSIC_MATRIX_SIZE; ++i) {
-    //     cam_K[i] = cam_info[i + 2];
-    // }
+    for (int i = 0; i < CAMERA_INTRINSIC_MATRIX_SIZE; ++i) {
+        cam_K[i] = cam_info[i + 2];
+    }
 
-    // for (int i = 0; i < CAMERA_POSE_MATRIX_SIZE; ++i) {
-    //     cam_pose[i] = cam_info[i + 11];
-    // }
+    for (int i = 0; i < CAMERA_POSE_MATRIX_SIZE; ++i) {
+        cam_pose[i] = cam_info[i + 11];
+    }
 
-    // // Total voxels in a fixed 3d volume of voxel_size
-    // size_t num_voxels = vox_size[0] * vox_size[1] * vox_size[2];
-    // printf("num_voxels%d",num_voxels);
-    // for (size_t vox_idx = 0; vox_idx < num_voxels; ++vox_idx) {
-    //     int z = double((vox_idx / (vox_size[0] * vox_size[1])) % vox_size[2]);
-    //     int y = double((vox_idx / vox_size[0]) % vox_size[1]);
-    //     int x = double(vox_idx % vox_size[0]);
-    //     int search_region = (int)round(vox_margin / vox_unit);
+    // Total voxels in a fixed 3d volume of voxel_size
+    size_t num_voxels = vox_size[0] * vox_size[1] * vox_size[2];
+    printf("num_voxels%d",num_voxels);
+    for (size_t vox_idx = 0; vox_idx < num_voxels; ++vox_idx) {
+        int z = double((vox_idx / (vox_size[0] * vox_size[1])) % vox_size[2]);
+        int y = double((vox_idx / vox_size[0]) % vox_size[1]);
+        int x = double(vox_idx % vox_size[0]);
+        int search_region = (int)round(vox_margin / vox_unit);
 
-    //     if (vox_binary[vox_idx] > 0) {
-    //         vox_tsdf[vox_idx] = 0;
-    //         continue;
-    //     }
+        if (vox_binary[vox_idx] > 0) {
+            vox_tsdf[vox_idx] = 0;
+            continue;
+        }
 
-    //     if(vox_idx % 10000==0) {
-    //         printf("computing voxel no %d /n",vox_idx );
-    //     }
+        if(vox_idx % 10000==0) {
+            printf("computing voxel no %d /n",vox_idx );
+        }
 
-    //     // Get point in world coordinates (XYZ) from grid coordinates (YZX)
-    //     double point_base[3] = {0};
-    //     point_base[0] = double(z) * vox_unit + vox_origin[0];
-    //     point_base[1] = double(x) * vox_unit + vox_origin[1];
-    //     point_base[2] = double(y) * vox_unit + vox_origin[2];
+        // Get point in world coordinates (XYZ) from grid coordinates (YZX)
+        double point_base[3] = {0};
+        point_base[0] = double(z) * vox_unit + vox_origin[0];
+        point_base[1] = double(x) * vox_unit + vox_origin[1];
+        point_base[2] = double(y) * vox_unit + vox_origin[2];
 
-    //     // Get point in current camera coordinates
-    //     double point_cam[3] = {0};
-    //     point_base[0] = point_base[0] - cam_pose[0 * 4 + 3];
-    //     point_base[1] = point_base[1] - cam_pose[1 * 4 + 3];
-    //     point_base[2] = point_base[2] - cam_pose[2 * 4 + 3];
-    //     point_cam[0] = cam_pose[0 * 4 + 0] * point_base[0] + cam_pose[1 * 4 + 0] * point_base[1] +
-    //                    cam_pose[2 * 4 + 0] * point_base[2];
-    //     point_cam[1] = cam_pose[0 * 4 + 1] * point_base[0] + cam_pose[1 * 4 + 1] * point_base[1] +
-    //                    cam_pose[2 * 4 + 1] * point_base[2];
-    //     point_cam[2] = cam_pose[0 * 4 + 2] * point_base[0] + cam_pose[1 * 4 + 2] * point_base[1] +
-    //                    cam_pose[2 * 4 + 2] * point_base[2];
-    //     if (point_cam[2] <= 0) {
-    //         continue;
-    //     }
+        // Get point in current camera coordinates
+        double point_cam[3] = {0};
+        point_base[0] = point_base[0] - cam_pose[0 * 4 + 3];
+        point_base[1] = point_base[1] - cam_pose[1 * 4 + 3];
+        point_base[2] = point_base[2] - cam_pose[2 * 4 + 3];
+        point_cam[0] = cam_pose[0 * 4 + 0] * point_base[0] + cam_pose[1 * 4 + 0] * point_base[1] +
+                       cam_pose[2 * 4 + 0] * point_base[2];
+        point_cam[1] = cam_pose[0 * 4 + 1] * point_base[0] + cam_pose[1 * 4 + 1] * point_base[1] +
+                       cam_pose[2 * 4 + 1] * point_base[2];
+        point_cam[2] = cam_pose[0 * 4 + 2] * point_base[0] + cam_pose[1 * 4 + 2] * point_base[1] +
+                       cam_pose[2 * 4 + 2] * point_base[2];
+        if (point_cam[2] <= 0) {
+            continue;
+        }
 
-    //     // Project point to 2D
-    //     int pixel_x = roundf(cam_K[0] * (point_cam[0] / point_cam[2]) + cam_K[2]);
-    //     int pixel_y = roundf(cam_K[4] * (point_cam[1] / point_cam[2]) + cam_K[5]);
-    //     if (pixel_x < 0 || pixel_x >= frame_width || pixel_y < 0 || pixel_y >= frame_height) {  // outside FOV
-    //         continue;
-    //     }
+        // Project point to 2D
+        int pixel_x = roundf(cam_K[0] * (point_cam[0] / point_cam[2]) + cam_K[2]);
+        int pixel_y = roundf(cam_K[4] * (point_cam[1] / point_cam[2]) + cam_K[5]);
+        if (pixel_x < 0 || pixel_x >= frame_width || pixel_y < 0 || pixel_y >= frame_height) {  // outside FOV
+            continue;
+        }
 
-    //     // Get depth
-    //     double point_depth = depth_data[pixel_y * frame_width + pixel_x];
-    //     if (point_depth < double(0.5f) || point_depth > double(8.0f)) {
-    //         continue;
-    //     }
-    //     if (roundf(point_depth) == 0) {  // mising depth
-    //         vox_tsdf[vox_idx] = double(-1.0);
-    //         continue;
-    //     }
+        // Get depth
+        double point_depth = depth_data[pixel_y * frame_width + pixel_x];
+        if (point_depth < double(0.5f) || point_depth > double(8.0f)) {
+            continue;
+        }
+        if (roundf(point_depth) == 0) {  // mising depth
+            vox_tsdf[vox_idx] = double(-1.0);
+            continue;
+        }
 
-    //     // Get depth difference
-    //     double sign;
-    //     if (abs(point_depth - point_cam[2]) < 0.0001) {
-    //         sign = 1;  // avoid NaN
-    //     } else {
-    //         sign = (point_depth - point_cam[2]) / abs(point_depth - point_cam[2]);
-    //     }
-    //     vox_tsdf[vox_idx] = double(sign);
-    //     for (int iix = std::max(0, x - search_region); iix < std::min((int)vox_size[0], x + search_region + 1); iix++) {
-    //         for (int iiy = std::max(0, y - search_region); iiy < std::min((int)vox_size[1], y + search_region + 1);
-    //              iiy++) {
-    //             for (int iiz = std::max(0, z - search_region); iiz < std::min((int)vox_size[2], z + search_region + 1);
-    //                  iiz++) {
-    //                 int iidx = iiz * vox_size[0] * vox_size[1] + iiy * vox_size[0] + iix;
-    //                 if (vox_binary[iidx] > 0) {
-    //                     double xd = std::abs(x - iix);
-    //                     double yd = std::abs(y - iiy);
-    //                     double zd = std::abs(z - iiz);
-    //                     double tsdf_value = sqrtf(xd * xd + yd * yd + zd * zd) / (double)search_region;
-    //                     if (tsdf_value < std::abs(vox_tsdf[vox_idx])) {
-    //                         vox_tsdf[vox_idx] = double(tsdf_value * sign);
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+        // Get depth difference
+        double sign;
+        if (abs(point_depth - point_cam[2]) < 0.0001) {
+            sign = 1;  // avoid NaN
+        } else {
+            sign = (point_depth - point_cam[2]) / abs(point_depth - point_cam[2]);
+        }
+        vox_tsdf[vox_idx] = double(sign);
+        for (int iix = std::max(0, x - search_region); iix < std::min((int)vox_size[0], x + search_region + 1); iix++) {
+            for (int iiy = std::max(0, y - search_region); iiy < std::min((int)vox_size[1], y + search_region + 1);
+                 iiy++) {
+                for (int iiz = std::max(0, z - search_region); iiz < std::min((int)vox_size[2], z + search_region + 1);
+                     iiz++) {
+                    int iidx = iiz * vox_size[0] * vox_size[1] + iiy * vox_size[0] + iix;
+                    if (vox_binary[iidx] > 0) {
+                        double xd = std::abs(x - iix);
+                        double yd = std::abs(y - iiy);
+                        double zd = std::abs(z - iiz);
+                        double tsdf_value = sqrtf(xd * xd + yd * yd + zd * zd) / (double)search_region;
+                        if (tsdf_value < std::abs(vox_tsdf[vox_idx])) {
+                            vox_tsdf[vox_idx] = double(tsdf_value * sign);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void ComputeTSDF(double* cam_info, double* vox_info, double* depth_data, double* vox_tsdf,
@@ -223,7 +322,7 @@ void ComputeTSDF(double* cam_info, double* vox_info, double* depth_data, double*
 
     // from depth map to binaray voxel representation
     depth2Grid(cam_info, vox_info, depth_data, vox_binary, depth_mapping_idxs);
-    SquaredDistanceTransformFull(cam_info, vox_info, depth_data, vox_binary, vox_tsdf);
+    squaredDistanceTransform(cam_info, vox_info, depth_data, vox_binary, vox_tsdf);
     tsdfTransform(vox_info, vox_tsdf);  // invert TSDF
 
     // copy computed TSDF back
