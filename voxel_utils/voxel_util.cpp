@@ -222,7 +222,8 @@ void squaredDistanceTransform(double* cam_info, double* vox_info, double* depth_
 
     // Total voxels in a fixed 3d volume of voxel_size
     size_t num_voxels = vox_size[0] * vox_size[1] * vox_size[2];
-    printf("num_voxels%d",num_voxels);
+
+    #pragma omp parallel for
     for (size_t vox_idx = 0; vox_idx < num_voxels; ++vox_idx) {
         int z = double((vox_idx / (vox_size[0] * vox_size[1])) % vox_size[2]);
         int y = double((vox_idx / vox_size[0]) % vox_size[1]);
@@ -232,10 +233,6 @@ void squaredDistanceTransform(double* cam_info, double* vox_info, double* depth_
         if (vox_binary[vox_idx] > 0) {
             vox_tsdf[vox_idx] = 0;
             continue;
-        }
-
-        if(vox_idx % 10000==0) {
-            printf("computing voxel no %d /n",vox_idx );
         }
 
         // Get point in world coordinates (XYZ) from grid coordinates (YZX)
