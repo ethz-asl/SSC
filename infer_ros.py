@@ -45,18 +45,21 @@ class ROSInfer:
         Receive a Depth image from the simulation, voxelize the depthmap as TSDF, 2D to 3D mapping
         and perform inference using 3D CNN. Publish the results as SSCGrid Message.
         """
+        
+
+        # get depth camera pose wrt odom
+        try:
+            position, orientation = self.listener.lookupTransform(
+                self.world_frame, self.depth_cam_frame, depth_image.header.stamp)
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
         # parse depth image
         cv_image = self.bridge.imgmsg_to_cv2(
             depth_image, desired_encoding='passthrough')
-
-        # get depth camera pose wrt odom
-        self.listener.waitForTransform(
-            self.world_frame,  self.depth_cam_frame, depth_image.header.stamp, rospy.Duration(4.0))
-        position, orientation = self.listener.lookupTransform(
-            self.world_frame, self.depth_cam_frame, depth_image.header.stamp)
 
         # prepare pose matrix
         pose_matrix = tr.quaternion_matrix(orientation)

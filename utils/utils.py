@@ -14,26 +14,26 @@ def compute_tsdf(depth_data, vox_origin, cam_k, cam_pose0, voxel_size=(240,144,2
     voxel_occupancy = np.zeros(voxel_size[0] * voxel_size[1] * voxel_size[2], dtype=np.float64 )
 
     # setup camera info
-    cam_info = np.zeros(27,dtype=np.float64);
-    cam_info[0] = width;
-    cam_info[1] =  height;
+    cam_info = np.zeros(27,dtype=np.float64)
+    cam_info[0] = width
+    cam_info[1] =  height
 
     for i in range(9):
-        cam_info[i + 2] = np.asarray(cam_k).reshape(-1)[i];
+        cam_info[i + 2] = np.asarray(cam_k).reshape(-1)[i]
   
     for i in range(16):
-        cam_info[i + 11] = cam_pose0.reshape(-1)[i];
+        cam_info[i + 11] = cam_pose0.reshape(-1)[i]
 
     # setup voxel info
     vox_info = np.zeros(8,dtype=np.float64)
     vox_info[0] = 0.02; # vox unit
-    vox_info[1] = 0.24; # vox margin
+    vox_info[1] = 0.02; # vox margin
 
     for i in range(3):
-        vox_info[i + 2] = voxel_size[i];
+        vox_info[i + 2] = voxel_size[i]
 
     for i in range(3):
-        vox_info[i + 5] = vox_origin[i];
+        vox_info[i + 5] = vox_origin[i]
 
     depth_data_reshaped = depth_data.astype(np.float64).reshape(-1)
 

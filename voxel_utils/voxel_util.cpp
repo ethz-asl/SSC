@@ -84,68 +84,10 @@ void tsdfTransform(double* vox_info, double* vox_tsdf) {
     }
 }
 
+
 void SquaredDistanceTransform(double* cam_info, double* vox_info, double* depth_data, double* vox_binary,
                               double* vox_tsdf) {
-    // Get camera information
-    // int frame_width = cam_info[0];
-    // int frame_height = cam_info[1];
-    // double cam_K[9];
-    // for (int i = 0; i < 9; ++i) cam_K[i] = cam_info[i + 2];
-    // double cam_pose[16];
-    // for (int i = 0; i < 16; ++i) cam_pose[i] = cam_info[i + 11];
-
-    // // Get voxel volume parameters
-    // double vox_unit = vox_info[0];
-    // // double vox_margin = vox_info[1];
-    // int vox_size[3];
-    // for (int i = 0; i < 3; ++i) vox_size[i] = vox_info[i + 2];
-    // double vox_origin[3];
-    // for (int i = 0; i < 3; ++i) vox_origin[i] = vox_info[i + 5];
-
-    // // Get point in world coordinate
-    // #pragma omp parallel for
-    // for (size_t pixel_x = 0; pixel_x < frame_width; pixel_x++) {
-    //     for (size_t pixel_y = 0; pixel_y < frame_height; pixel_y++) {
-    //         double point_depth = depth_data[pixel_y * frame_width + pixel_x];
-
-    //         double point_cam[3] = {0};
-    //         point_cam[0] = (pixel_x - cam_K[2]) * point_depth / cam_K[0];
-    //         point_cam[1] = (pixel_y - cam_K[5]) * point_depth / cam_K[4];
-    //         point_cam[2] = point_depth;
-
-    //         double point_base[3] = {0};
-
-    //         point_base[0] = cam_pose[0 * 4 + 0] * point_cam[0] + cam_pose[0 * 4 + 1] * point_cam[1] +
-    //                         cam_pose[0 * 4 + 2] * point_cam[2];
-    //         point_base[1] = cam_pose[1 * 4 + 0] * point_cam[0] + cam_pose[1 * 4 + 1] * point_cam[1] +
-    //                         cam_pose[1 * 4 + 2] * point_cam[2];
-    //         point_base[2] = cam_pose[2 * 4 + 0] * point_cam[0] + cam_pose[2 * 4 + 1] * point_cam[1] +
-    //                         cam_pose[2 * 4 + 2] * point_cam[2];
-
-    //         point_base[0] = point_base[0] + cam_pose[0 * 4 + 3];
-    //         point_base[1] = point_base[1] + cam_pose[1 * 4 + 3];
-    //         point_base[2] = point_base[2] + cam_pose[2 * 4 + 3];
-
-    //         // World coordinate to grid coordinate
-    //         int z = (int)floor((point_base[0] - vox_origin[0]) / vox_unit);
-    //         int x = (int)floor((point_base[1] - vox_origin[1]) / vox_unit);
-    //         int y = (int)floor((point_base[2] - vox_origin[2]) / vox_unit);
-
-    //         // mark vox_binary
-    //         if (x >= 0 && x < vox_size[0] && y >= 0 && y < vox_size[1] && z >= 0 && z < vox_size[2]) {
-    //             int vox_idx = z * vox_size[0] * vox_size[1] + y * vox_size[0] + x;
-    //             //vox_binary[vox_idx] = double(1.0);
-    //             double point_depth = depth_data[pixel_y * frame_width + pixel_x];
-    //             //depth2voxel_idx[pixel_y * frame_width + pixel_x] = vox_idx;
-                
-    //         }
-    //     }
-    // }
-}
-
-// void SquaredDistanceTransform(double* cam_info, double* vox_info, double* depth_data, double* vox_binary,
-//                               double* vox_tsdf) {
-    // // Get voxel volume parameters
+    // Get voxel volume parameters
     // double vox_unit = vox_info[0];
     // double vox_margin = vox_info[1];
     // int vox_size[3];
@@ -262,7 +204,7 @@ void SquaredDistanceTransform(double* cam_info, double* vox_info, double* depth_
     //         }
     //     }
     // }
-//}
+}
 
 void ComputeTSDF(double* cam_info, double* vox_info, double* depth_data, double* vox_tsdf,
                  double* depth_mapping_idxs, double* occupancy) {
@@ -281,7 +223,7 @@ void ComputeTSDF(double* cam_info, double* vox_info, double* depth_data, double*
 
     // from depth map to binaray voxel representation
     depth2Grid(cam_info, vox_info, depth_data, vox_binary, depth_mapping_idxs);
-    SquaredDistanceTransform(cam_info, vox_info, depth_data, vox_binary, vox_tsdf);
+    SquaredDistanceTransformFull(cam_info, vox_info, depth_data, vox_binary, vox_tsdf);
     tsdfTransform(vox_info, vox_tsdf);  // invert TSDF
 
     // copy computed TSDF back
