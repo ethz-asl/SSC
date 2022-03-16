@@ -23,8 +23,7 @@ class ROSInfer:
     def __init__(self):
         self._load_arguments()
         self.net = make_model(self.args.model, num_classes=12)
-        self.depth_cam_frame = self.args.depth_cam_frame
-        self.world_frame = self.args.world_frame
+        self.input_topic = self.args.input_topic
         self.ssc_pub = rospy.Publisher('ssc', SSCGrid, queue_size=10)
         self.bridge = CvBridge()
 
@@ -35,7 +34,8 @@ class ROSInfer:
         # load pretrained model
         self.load_network()
         self.depth_img_subscriber = rospy.Subscriber(
-            self.depth_cam_frame, SSCInput, self.callback)
+            self.input_topic, SSCInput, self.callback)
+        print("SSC inference is setup.")
 
     def callback(self, ssc_input):
         """
@@ -132,20 +132,14 @@ class ROSInfer:
 
     def _load_arguments(self):
         parser = argparse.ArgumentParser(description='PyTorch SSC Inference')
-        parser.add_argument('--depth_cam_frame', type=str, default='/airsim_drone/Depth_cam',
-                            help='depth cam frame name (default: /airsim_drone/Depth_cam)')
-        parser.add_argument('--world_frame', type=str, default='/odom',
-                            help='world frame name (default: /odom)')
         parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'palnet'],
                             help='model name (default: palnet)')
-
         parser.add_argument('--resume', type=str, metavar='PATH',
                             help='path to latest checkpoint (default: none)')
+        parser.add_argument('--input_topic_name', type=str, default='ssc_input',    help='input topic name (default: /ssc_input)')
         args = parser.parse_args()
 
         # use argparse arguments as default and override with ros params
-        args.world_frame = rospy.get_param('~world_frame', args.world_frame)
-        args.depth_cam_frame = rospy.get_param('~depth_cam_frame', args.depth_cam_frame)
         args.model = rospy.get_param('~model', args.model)
         args.resume = rospy.get_param('~resume', args.resume)
         self.args = args
