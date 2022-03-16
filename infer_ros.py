@@ -136,12 +136,13 @@ class ROSInfer:
                             help='model name (default: palnet)')
         parser.add_argument('--resume', type=str, metavar='PATH',
                             help='path to latest checkpoint (default: none)')
-        parser.add_argument('--input_topic_name', type=str, default='ssc_input',    help='input topic name (default: /ssc_input)')
+        parser.add_argument('--input_topic', type=str, default='ssc_input',    help='Name of the input ros topic (default: /ssc_input)')
         args = parser.parse_args()
 
         # use argparse arguments as default and override with ros params
         args.model = rospy.get_param('~model', args.model)
         args.resume = rospy.get_param('~resume', args.resume)
+        args.input_topic = rospy.get_param('~input_topic', args.input_topic)
         self.args = args
 
 
