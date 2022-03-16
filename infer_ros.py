@@ -10,9 +10,7 @@ from torch.autograd import Variable
 
 # ROS dependencies
 import rospy
-from sensor_msgs.msg import Image
-import tf.transformations as tr
-import tf
+from ssc_msgs.msg import SSCInput
 from cv_bridge import CvBridge
 
 # local imports
@@ -27,7 +25,6 @@ class ROSInfer:
         self.net = make_model(self.args.model, num_classes=12)
         self.depth_cam_frame = self.args.depth_cam_frame
         self.world_frame = self.args.world_frame
-        self.listener = tf.TransformListener()
         self.ssc_pub = rospy.Publisher('ssc', SSCGrid, queue_size=10)
         self.bridge = CvBridge()
 
@@ -38,34 +35,27 @@ class ROSInfer:
         # load pretrained model
         self.load_network()
         self.depth_img_subscriber = rospy.Subscriber(
-            self.depth_cam_frame, Image, self.callback)
+            self.depth_cam_frame, SSCInput, self.callback)
 
-    def callback(self, depth_image):
+    def callback(self, ssc_input):
         """
         Receive a Depth image from the simulation, voxelize the depthmap as TSDF, 2D to 3D mapping
         and perform inference using 3D CNN. Publish the results as SSCGrid Message.
         """
-        
-
-        # get depth camera pose wrt odom
-        try:
-            position, orientation = self.listener.lookupTransform(
-                self.world_frame, self.depth_cam_frame, depth_image.header.stamp)
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            return
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
         # parse depth image
         cv_image = self.bridge.imgmsg_to_cv2(
-            depth_image, desired_encoding='passthrough')
+            ssc_input.image, desired_encoding='passthrough')
 
         # prepare pose matrix
-        pose_matrix = tr.quaternion_matrix(orientation)
-        pose_matrix[0:3, -1] = position
+        pose_matrix = np.array(ssc_input.pose)
+        pose_matrix = pose_matrix.reshape([4,4]).tolist()
+        print(pose_matrix)
 
-        vox_origin, rgb, depth, tsdf, position, occupancy_grid = self._load_data_from_depth_image(
+        vox_origin, rgb, depth, tsdf, position, occupancy = self._load_data_from_depth_image(
             cv_image, pose_matrix)
         x_depth = Variable(depth.float()).to(self.device)
         position = position.long().to(self.device)
