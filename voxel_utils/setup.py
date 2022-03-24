@@ -11,6 +11,9 @@ else:
    print("Could not find CUDA_PATH in environment variables. Defaulting to /usr/local/cuda!")
    CUDA_PATH = "/usr/local/cuda"
 
+print("Using fake cuda path for testing.")
+CUDA_PATH = "test"
+
 if not os.path.isdir(CUDA_PATH):
    print("CUDA_PATH {} not found. Switching to CPU!")
    setup(name = 'VoxelUtils', version = '1.0',  \

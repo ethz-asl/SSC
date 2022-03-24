@@ -53,9 +53,12 @@ class ROSInfer:
         # prepare pose matrix
         pose_matrix = np.array(ssc_input.pose)
         pose_matrix = pose_matrix.reshape([4,4])
-
+        print("Loading depth data")
         vox_origin, rgb, depth, tsdf, position, occupancy = self._load_data_from_depth_image(
             cv_image, pose_matrix)
+
+        print("Loaded depth data")
+        print(np.shape(tsdf))
         x_depth = Variable(depth.float()).to(self.device)
         position = position.long().to(self.device)
 
