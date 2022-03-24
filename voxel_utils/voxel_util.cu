@@ -297,6 +297,7 @@ void ComputeTSDF(double * cam_info_CPU, double * vox_info_CPU,
   // distance transform 
   int THREADS_NUM = 1024;
   int BLOCK_NUM = int((num_crop_voxels + size_t(THREADS_NUM) - 1) / THREADS_NUM);
+  std::cout <<"Threads: " << THREADS_NUM << ", blocks: " << BLOCK_NUM << std::endl;
 
   SquaredDistanceTransform <<< BLOCK_NUM, THREADS_NUM >>> (cam_info_GPU, vox_info_GPU, depth_data_GPU, vox_binary_GPU, vox_tsdf_GPU);
   
