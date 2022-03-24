@@ -109,7 +109,7 @@ class ROSInfer:
         vox_tsdf, depth_mapping_idxs, voxel_occupancy = utils.compute_tsdf(
             depth_npy, vox_origin, cam_k, cam_pose)
 
-        return vox_origin, rgb, torch.as_tensor(depth_npy).unsqueeze(0).unsqueeze(0), torch.as_tensor(vox_tsdf).unsqueeze(0), torch.as_tensor(depth_mapping_idxs).unsqueeze(0).unsqueeze(0), torch.as_tensor(voxel_occupancy.transpose(2, 1, 0)).unsqueeze(0)
+        return vox_origin, rgb, torch.tensor(depth_npy).unsqueeze(0).unsqueeze(0), torch.tensor(vox_tsdf).unsqueeze(0), torch.tensor(depth_mapping_idxs).unsqueeze(0).unsqueeze(0), torch.tensor(voxel_occupancy.transpose(2, 1, 0)).unsqueeze(0)
 
     def load_network(self):
         """
