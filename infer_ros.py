@@ -59,12 +59,17 @@ class ROSInfer:
 
         print("Loaded depth data")
         print(np.shape(tsdf))
+        print(np.shape(depth))
         x_depth = Variable(depth.float()).to(self.device)
+        print("converted depth data")
         position = position.long().to(self.device)
+        print("converted position data")
 
         if self.args.model == 'palnet':
             x_tsdf = Variable(tsdf.float()).to(self.device)
+            print("converted tsdf data")
             y_pred = self.net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
+            print("got prediction")
         else:
             x_rgb = Variable(rgb.float())
             y_pred = self.net(x_depth=x_depth, x_rgb=x_rgb, p=position)
