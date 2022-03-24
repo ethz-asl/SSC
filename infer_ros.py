@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from utils.seed import seed_torch
 import os
 
 # Network dependencies
@@ -10,13 +9,12 @@ from torch.autograd import Variable
 
 # ROS dependencies
 import rospy
-from ssc_msgs.msg import SSCInput
+from ssc_msgs.msg import SSCInput, SSCGrid
 from cv_bridge import CvBridge
 
 # local imports
 from models import make_model
 from utils import utils
-from ssc_msgs.msg import SSCGrid
 
 
 class ROSInfer:
@@ -60,13 +58,13 @@ class ROSInfer:
         print("Loaded depth data")
         print(np.shape(tsdf))
         print(np.shape(depth))
-        x_depth = Variable(depth.float()).to(self.device)
+        x_depth = Variable(depth.float()).cuda()
         print("converted depth data")
-        position = position.long().to(self.device)
+        position = position.long().cuda()
         print("converted position data")
 
         if self.args.model == 'palnet':
-            x_tsdf = Variable(tsdf.float()).to(self.device)
+            x_tsdf = Variable(tsdf.float()).cuda()
             print("converted tsdf data")
             y_pred = self.net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
             print("got prediction")
@@ -132,7 +130,7 @@ class ROSInfer:
             print("Using CPU!")
             self.device = torch.device('cpu')
 
-        self.net = self.net.to(self.device)
+        self.net = self.net.cuda()
 
         # switch to test mode
         self.net.eval()
