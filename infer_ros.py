@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import os
+import sys
 
 # Network dependencies
 import torch
 import argparse
 import numpy as np
-from torch.autograd import Variable
 
 # ROS dependencies
 import rospy
@@ -32,7 +32,7 @@ class ROSInfer:
         # load pretrained model
         self.load_network()
         self.depth_img_subscriber = rospy.Subscriber(
-            self.input_topic, SSCInput, self.callback)
+            self.input_topic, SSCInput, self.callback, queue_size=1)
         print("SSC inference is setup.")
 
     def callback(self, ssc_input):
@@ -51,27 +51,17 @@ class ROSInfer:
         # prepare pose matrix
         pose_matrix = np.array(ssc_input.pose)
         pose_matrix = pose_matrix.reshape([4,4])
-        print("Loading depth data")
         vox_origin, rgb, depth, tsdf, position, occupancy = self._load_data_from_depth_image(
             cv_image, pose_matrix)
 
-        print("Loaded depth data")
-        print(np.shape(tsdf))
-        print(np.shape(depth))
-        depth2 = depth.clone()
-        # depth2 = torch.tensor(np.zeros(np.shape(depth)))
-        x_depth = Variable(depth2.float()).cuda()
-        print("converted depth data")
-        position = position.long().cuda()
-        print("converted position data")
+        x_depth = depth.float().to(self.device)
+        position = position.long().to(self.device)
 
         if self.args.model == 'palnet':
-            x_tsdf = Variable(tsdf.float()).cuda()
-            print("converted tsdf data")
+            x_tsdf = tsdf.float().to(self.device)
             y_pred = self.net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
-            print("got prediction")
         else:
-            x_rgb = Variable(rgb.float())
+            x_rgb = rgb.float().to(self.device)
             y_pred = self.net(x_depth=x_depth, x_rgb=x_rgb, p=position)
 
         scores = torch.nn.Softmax(dim=0)(y_pred.squeeze())
@@ -132,7 +122,7 @@ class ROSInfer:
             print("Using CPU!")
             self.device = torch.device('cpu')
 
-        self.net = self.net.cuda()
+        self.net = self.net.to(self.device)
 
         # switch to test mode
         self.net.eval()
