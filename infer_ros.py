@@ -13,6 +13,7 @@ import rospy
 from sensor_msgs.msg import Image
 import tf.transformations as tr
 import tf
+import cv2
 from cv_bridge import CvBridge
 
 # local imports
@@ -82,6 +83,7 @@ class ROSInfer:
 
         #setup message
         msg = SSCGrid()
+        msg.header = depth_image.header
         msg.data = preds.reshape(-1).astype(np.float32).tolist()
 
         msg.origin_x = vox_origin[0]
