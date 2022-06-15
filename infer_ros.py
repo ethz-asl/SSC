@@ -40,7 +40,7 @@ class ROSInfer:
         # load pretrained model
         self.load_network()
         self.depth_img_subscriber = rospy.Subscriber(
-            self.input_topic_name, Image, self.callback)
+            self.input_topic_name, Image, self.callback, queue_size=1)
         print("SSC Inference setup successfully!")
 
     def callback(self, depth_image):
