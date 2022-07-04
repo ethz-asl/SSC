@@ -80,6 +80,9 @@ class ROSInfer:
             y_pred = self.net(x_depth=x_depth, x_rgb=x_rgb, p=position)
 
         scores = torch.nn.Softmax(dim=0)(y_pred.squeeze())
+        # Threshold max probs for encoding free space
+        max_prob = 1.0 - 1e-8
+        scores[scores> max_prob] = max_prob
         free_space_confidence = scores[0]
         
         # Encode free space scores along with class id.
