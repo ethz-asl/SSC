@@ -182,6 +182,8 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
     model.eval()  # switch to evaluate mode.
     val_acc, val_p, val_r, val_iou = 0.0, 0.0, 0.0, 0.0
     _C = 12
+    calibration_occ = np.zeros(_C, dtype=np.int32)
+    calibration_total = np.zeros(_C, dtype=np.int32)
     val_cnt_class = np.zeros(_C, dtype=np.int32)  # count for each class
     val_iou_ssc = np.zeros(_C, dtype=np.float32)  # sum of iou for each class
     count = 0
@@ -202,7 +204,7 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
             y_true = y_true.numpy()  # torch tensor to numpy
             nonempty = nonempty.numpy()
 
-            p, r, iou, acc, iou_sum, cnt_class, calib = validate_on_batch(y_pred, y_true, nonempty)
+            p, r, iou, acc, iou_sum, cnt_class, calib_occ, calib_total = validate_on_batch(y_pred, y_true, nonempty)
             count += 1
             val_acc += acc
             val_p += p
@@ -210,7 +212,8 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
             val_iou += iou
             val_iou_ssc = np.add(val_iou_ssc, iou_sum)
             val_cnt_class = np.add(val_cnt_class, cnt_class)
-            occupancy_calibration = []
+            calibration_occ = calibration_occ + calib_occ
+            calibration_total = calibration_total + calib_total
             # print('acc_w, acc, p, r, iou', acc_w, acc, p, r, iou)
 
     val_acc = val_acc / count
@@ -218,7 +221,11 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
     val_r = val_r / count
     val_iou = val_iou / count
     val_iou_ssc, val_iou_ssc_mean = sscMetrics.get_iou(val_iou_ssc, val_cnt_class)
-    return val_p, val_r, val_iou, val_acc, val_iou_ssc, val_iou_ssc_mean, occupancy_calibration
+    calibration = np.zeros(_C+2, dtype=np.float64)
+    calibration[2:] = np.divide(calibration_occ, calibration_total)
+    calibration[0] = calibration[2]
+    calibration[1] = np.sum(calib_occ[1:]) / np.sum(calib_total[1:])
+    return val_p, val_r, val_iou, val_acc, val_iou_ssc, val_iou_ssc_mean, calibration
 
 
 def validate_on_batch(predict, target, nonempty=None):  # CPU
@@ -232,9 +239,9 @@ def validate_on_batch(predict, target, nonempty=None):  # CPU
     p, r, iou = sscMetrics.get_score_completion(y_pred, y_true, nonempty)
     #acc, iou_sum, cnt_class = sscMetrics.get_score_semantic_and_completion(y_pred, y_true, stsdf)
     acc, iou_sum, cnt_class, tp_sum, fp_sum, fn_sum = sscMetrics.get_score_semantic_and_completion(y_pred, y_true, nonempty)
-    calib = sscMetrics.get_occupancy_calibration(y_pred, y_true)
+    calib_occ, calib_total = sscMetrics.get_occupancy_calibration(y_pred, y_true)
     # iou = np.divide(iou_sum, cnt_class)
-    return p, r, iou, acc, iou_sum, cnt_class, calib
+    return p, r, iou, acc, iou_sum, cnt_class, calib_occ, calib_total
 
 
 # static method

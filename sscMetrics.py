@@ -65,21 +65,18 @@ def get_occupancy_calibration(predict, target):
     target = target.reshape(_bs, -1)  # (_bs, 60*36*60) 129600
     predict = predict.reshape(_bs, _C, -1)  # (_bs, _C, 60*36*60)
     predict = np.argmax(predict, axis=1)  # one-hot: _bs x _C x 60*36*60 -->  label: _bs x 60*36*60.
-    print(np.shape(predict))
-    print(predict)
-    return 1
+    calib_occupied = np.zeros(_C, dtype=np.int32) # calibrate occupancy per class.
+    calib_total = np.zeros(_C, dtype=np.int32)
 
-    correct = (predict == target)  # (_bs, 129600)
-    if weight:  # 0.04s, add class weights
-        weight_k = np.ones(target.shape)
-        for i in range(_bs):
-            for n in range(target.shape[1]):
-                idx = 0 if target[i, n] == 255 else target[i, n]
-                weight_k[i, n] = weight[idx]
-                # weight_k[i, n] = weight[target[i, n]]
-        correct = correct * weight_k
-    acc = correct.sum() / correct.size
-    return acc
+    # Go through all predictions and check the occupancy
+    occupied = (target != 0)  # (_bs, 129600)
+    for i in range(_bs):
+        for n in range(target.shape[1]):
+            label = predict[i,n]
+            calib_total[label] = calib_total[label] + 1
+            calib_occupied[label] = calib_occupied[label] + occupied[i,n]
+
+    return calib_occupied, calib_total
 
 
 def get_score_semantic_and_completion(predict, target, nonempty=None):
