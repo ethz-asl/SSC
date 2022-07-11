@@ -72,7 +72,7 @@ class ROSInfer:
         x_depth = Variable(depth.float()).to(self.device)
         position = position.long().to(self.device)
 
-        if self.args.model == 'palnet':
+        if self.args.model == 'palnet' or self.args.modle == 'palnet_ours':
             x_tsdf = Variable(tsdf.float()).to(self.device)
             y_pred = self.net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
         else:

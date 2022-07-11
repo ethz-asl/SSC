@@ -70,6 +70,11 @@ def get_occupancy_calibration(predict, target):
 
     # Go through all predictions and check the occupancy
     occupied = (target != 0)  # (_bs, 129600)
+
+    # TEST
+    inv = (target > _C)
+    print(f"Number of classes > {_C}: {np.sum(inv)}.")
+
     for i in range(_bs):
         for n in range(target.shape[1]):
             label = predict[i,n]
