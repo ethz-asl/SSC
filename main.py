@@ -33,7 +33,7 @@ import config
 parser = argparse.ArgumentParser(description='PyTorch SSC Training')
 parser.add_argument('--dataset', type=str, default='nyu', choices=['nyu', 'nyucad', 'debug'],
                     help='dataset name (default: nyu)')
-parser.add_argument('--model', type=str, default='ddrnet', choices=['ddrnet', 'aicnet', 'grfnet', 'palnet'],
+parser.add_argument('--model', type=str, default='ddrnet', choices=['ddrnet', 'aicnet', 'grfnet', 'palnet', 'palnet_ours'],
                     help='model name (default: palnet)')
 # parser.add_argument('--data_augment', default=False, type=bool,  help='data augment for training')
 parser.add_argument('--epochs', default=50, type=int,

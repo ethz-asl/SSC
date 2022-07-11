@@ -20,7 +20,7 @@ from utils import utils
 parser = argparse.ArgumentParser(description='PyTorch SSC Inference')
 parser.add_argument('--dataset', type=str, default='nyu', choices=['nyu', 'nyucad', 'debug'],
                     help='dataset name (default: nyu)')
-parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'aicnet', 'grfnet', 'palnet'],
+parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'aicnet', 'grfnet', 'palnet', 'palnet_ours'],
                     help='model name (default: palnet)')
 parser.add_argument('--files', default="/home/mcheem/data/datasets/large_room/", help='Depth Images')
 

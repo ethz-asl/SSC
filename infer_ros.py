@@ -155,7 +155,7 @@ class ROSInfer:
                             help='Output topic name to publish to (default: /ssc)')
         parser.add_argument('--world_frame', type=str, default='/odom',
                             help='world frame name (default: /odom)')
-        parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'palnet'],
+        parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'palnet', 'palnet_ours'],
                             help='model name (default: palnet)')
 
         parser.add_argument('--resume', type=str, metavar='PATH',
