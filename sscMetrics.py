@@ -7,10 +7,10 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 """
 ---- Input:
     predict:
-        type, numpy.ndarray 
+        type, numpy.ndarray
         shape, (BS=batch_size, C=class_num, W, H, D), onehot encoding
     target:
-        type, numpy.ndarray 
+        type, numpy.ndarray
         shape, (batch_size, W, H, D)
 ---- Return
     iou, Intersection over Union
@@ -42,7 +42,32 @@ def get_accuracy(predict, target, weight=None):  # 0.05s
     target = np.int32(target)
     target = target.reshape(_bs, -1)  # (_bs, 60*36*60) 129600
     predict = predict.reshape(_bs, _C, -1)  # (_bs, _C, 60*36*60)
+    # one-hot: _bs x _C x 60*36*60 -->  label: _bs x 60*36*60.
+    predict = np.argmax(predict, axis=1)
+
+    correct = (predict == target)  # (_bs, 129600)
+    if weight:  # 0.04s, add class weights
+        weight_k = np.ones(target.shape)
+        for i in range(_bs):
+            for n in range(target.shape[1]):
+                idx = 0 if target[i, n] == 255 else target[i, n]
+                weight_k[i, n] = weight[idx]
+                # weight_k[i, n] = weight[target[i, n]]
+        correct = correct * weight_k
+    acc = correct.sum() / correct.size
+    return acc
+
+
+def get_occupancy_calibration(predict, target):
+    _bs = predict.shape[0]  # batch size
+    _C = predict.shape[1]   # _C = 12
+    target = np.int32(target)
+    target = target.reshape(_bs, -1)  # (_bs, 60*36*60) 129600
+    predict = predict.reshape(_bs, _C, -1)  # (_bs, _C, 60*36*60)
     predict = np.argmax(predict, axis=1)  # one-hot: _bs x _C x 60*36*60 -->  label: _bs x 60*36*60.
+    print(np.shape(predict))
+    print(predict)
+    return 1
 
     correct = (predict == target)  # (_bs, 129600)
     if weight:  # 0.04s, add class weights
