@@ -36,19 +36,28 @@ parser.add_argument('--dataset', type=str, default='nyu', choices=['nyu', 'nyuca
 parser.add_argument('--model', type=str, default='ddrnet', choices=['ddrnet', 'aicnet', 'grfnet', 'palnet'],
                     help='model name (default: palnet)')
 # parser.add_argument('--data_augment', default=False, type=bool,  help='data augment for training')
-parser.add_argument('--epochs', default=50, type=int, metavar='N', help='number of total epochs to run')
+parser.add_argument('--epochs', default=50, type=int,
+                    metavar='N', help='number of total epochs to run')
 
-parser.add_argument('--lr', default=0.01, type=float, metavar='LR', help='initial learning rate')
-parser.add_argument('--lr_adj_n', default=100, type=int, metavar='LR', help='every n epochs adjust learning rate once')
-parser.add_argument('--lr_adj_rate', default=0.1, type=float, metavar='LR', help='scale while adjusting learning rate')
+parser.add_argument('--lr', default=0.01, type=float,
+                    metavar='LR', help='initial learning rate')
+parser.add_argument('--lr_adj_n', default=100, type=int,
+                    metavar='LR', help='every n epochs adjust learning rate once')
+parser.add_argument('--lr_adj_rate', default=0.1, type=float,
+                    metavar='LR', help='scale while adjusting learning rate')
 
-parser.add_argument('--batch_size', default=4, type=int, metavar='N', help='mini-batch size (default: 4)')
-parser.add_argument('--workers', default=4, type=int, metavar='N', help='number of data loading workers (default: 4)')
-parser.add_argument('--resume', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
-parser.add_argument('--checkpoint', default='./', metavar='DIR', help='path to checkpoint')
+parser.add_argument('--batch_size', default=4, type=int,
+                    metavar='N', help='mini-batch size (default: 4)')
+parser.add_argument('--workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
+parser.add_argument('--resume', type=str, metavar='PATH',
+                    help='path to latest checkpoint (default: none)')
+parser.add_argument('--checkpoint', default='./',
+                    metavar='DIR', help='path to checkpoint')
 # parser.add_argument('--logdir', default='./logs_debug', metavar='DIR', help='path to logs')
 
-parser.add_argument('--model_name', default='SSC_debug', type=str, help='name of model to save check points')
+parser.add_argument('--model_name', default='SSC_debug',
+                    type=str, help='name of model to save check points')
 
 # parser.add_argument('--w', default=0.05, type=float, help='weight')
 
@@ -68,17 +77,18 @@ def main():
 
     train_time_start = datetime.datetime.now()
     train()
-    print('Training finished in: {}'.format(datetime.datetime.now() - train_time_start))
+    print('Training finished in: {}'.format(
+        datetime.datetime.now() - train_time_start))
 
 
 def train():
-    
+
     # ---- Data loader
     train_loader, val_loader = make_data_loader(args)
-    
+
     # ---- create model ---------- ---------- ---------- ---------- ----------#
     net = make_model(args.model, num_classes=12).cuda()
-    #net = torch.nn.DataParallel(net)  # Multi-GPU
+    # net = torch.nn.DataParallel(net)  # Multi-GPU
 
     # ---- optionally resume from a checkpoint --------- ---------- ----------#
     if args.resume:
@@ -87,17 +97,21 @@ def train():
             cp_states = torch.load(args.resume)
             net.load_state_dict(cp_states['state_dict'], strict=True)
         else:
-            raise Exception("=> NO checkpoint found at '{}'".format(args.resume))
+            raise Exception(
+                "=> NO checkpoint found at '{}'".format(args.resume))
 
     # -------- ---------- --- Set checkpoint --------- ---------- ----------#
     # timestamp = datetime.datetime.now().strftime("%Y%m%d-%H.%M.%S")
     # model_info = 'epoch{}_lr{}'.format(args.epochs, args.lr)
     cp_filename = args.checkpoint + 'cp_{}.pth.tar'.format(args.model_name)
-    cp_best_filename = args.checkpoint + 'cpBest_{}.pth.tar'.format(args.model_name)
+    cp_best_filename = args.checkpoint + \
+        'cpBest_{}.pth.tar'.format(args.model_name)
 
     # ---- Define loss function (criterion) and optimizer ---------- ----------#
-    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, net.parameters()), lr=args.lr, weight_decay=0.0005, momentum=0.9)
-    loss_func = torch.nn.CrossEntropyLoss(weight=config.class_weights, ignore_index=255).cuda()
+    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, net.parameters(
+    )), lr=args.lr, weight_decay=0.0005, momentum=0.9)
+    loss_func = torch.nn.CrossEntropyLoss(
+        weight=config.class_weights, ignore_index=255).cuda()
 
     # ---- Print Settings for training -------- ---------- ---------- ----------#
     print('Training epochs:{} \nInitial Learning rate:{} \nBatch size:{} \nNumber of workers:{}'.format(
@@ -108,8 +122,9 @@ def train():
         cp_filename))
     print("Checkpoint filename:{}".format(cp_filename))
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_adj_n, gamma=args.lr_adj_rate, last_epoch=-1)
-        
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=args.lr_adj_n, gamma=args.lr_adj_rate, last_epoch=-1)
+
     np.set_printoptions(precision=1)
 
     # ---- Train
@@ -122,7 +137,7 @@ def train():
         # print("epoch {}".format(epoch))
         net.train()  # switch to train mode
         # adjust_learning_rate(optimizer, args.lr, epoch, n=args.lr_adj_n, rate=args.lr_adj_rate)  # n=10, rate=0.9
-       
+
         decs_str = 'Training epoch {}/{}'.format(epoch + 1, args.epochs)
         log_loss_1epoch = 0.0
         step_count = 0
@@ -145,7 +160,8 @@ def train():
                 x_rgb = Variable(rgb.float()).cuda()
                 y_pred = net(x_depth=x_depth, x_rgb=x_rgb, p=position)
 
-            y_pred = y_pred.permute(0, 2, 3, 4, 1).contiguous()  # (BS, C, D, H, W) --> (BS, D, H, W, C)
+            # (BS, C, D, H, W) --> (BS, D, H, W, C)
+            y_pred = y_pred.permute(0, 2, 3, 4, 1).contiguous()
             y_pred = y_pred.view(-1, 12)  # C = 12
 
             optimizer.zero_grad()
@@ -157,9 +173,12 @@ def train():
         scheduler.step()
 
         # ---- Evaluate on validation set
-        v_prec, v_recall, v_iou, v_acc, v_ssc_iou, v_mean_iou = validate_on_dataset_stsdf(net, val_loader)
-        print('Validate with TSDF:epoch {}, p {:.1f}, r {:.1f}, IoU {:.1f}'.format(epoch + 1, v_prec*100.0, v_recall*100.0, v_iou*100.0))
-        print('pixel-acc {:.4f}, mean IoU {:.1f}, SSC IoU:{}'.format(v_acc*100.0, v_mean_iou*100.0, v_ssc_iou*100.0))
+        v_prec, v_recall, v_iou, v_acc, v_ssc_iou, v_mean_iou = validate_on_dataset_stsdf(
+            net, val_loader)
+        print('Validate with TSDF:epoch {}, p {:.1f}, r {:.1f}, IoU {:.1f}'.format(
+            epoch + 1, v_prec*100.0, v_recall*100.0, v_iou*100.0))
+        print('pixel-acc {:.4f}, mean IoU {:.1f}, SSC IoU:{}'.format(v_acc *
+              100.0, v_mean_iou*100.0, v_ssc_iou*100.0))
 
         # ---- Save Checkpoint
         is_best = v_mean_iou > best_miou
@@ -167,7 +186,8 @@ def train():
         state = {'state_dict': net.state_dict()}
         torch.save(state, cp_filename)
         if is_best:
-            print('Yeah! Got better mIoU {}% in epoch {}. State saved'.format(100.0*v_mean_iou, epoch + 1))
+            print('Yeah! Got better mIoU {}% in epoch {}. State saved'.format(
+                100.0*v_mean_iou, epoch + 1))
             torch.save(state, cp_best_filename)  # Save Checkpoint
 
 # --------------------------------------------------------------------------------------------------------------
@@ -195,16 +215,20 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
 
             if args.model == 'palnet' or args.model == 'palnet_ours':
                 var_x_volume = Variable(volume.float()).cuda()
-                y_pred = model(x_depth=var_x_depth, x_tsdf=var_x_volume, p=position)
+                y_pred = model(x_depth=var_x_depth,
+                               x_tsdf=var_x_volume, p=position)
             else:
                 var_x_rgb = Variable(rgb.float()).cuda()
-                y_pred = model(x_depth=var_x_depth, x_rgb=var_x_rgb, p=position)  # y_pred.size(): (bs, C, W, H, D)
+                # y_pred.size(): (bs, C, W, H, D)
+                y_pred = model(x_depth=var_x_depth,
+                               x_rgb=var_x_rgb, p=position)
 
             y_pred = y_pred.cpu().data.numpy()  # CUDA to CPU, Variable to numpy
             y_true = y_true.numpy()  # torch tensor to numpy
             nonempty = nonempty.numpy()
 
-            p, r, iou, acc, iou_sum, cnt_class, calib_occ, calib_total = validate_on_batch(y_pred, y_true, nonempty)
+            p, r, iou, acc, iou_sum, cnt_class, calib_occ, calib_total = validate_on_batch(
+                y_pred, y_true, nonempty)
             count += 1
             val_acc += acc
             val_p += p
@@ -220,9 +244,11 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
     val_p = val_p / count
     val_r = val_r / count
     val_iou = val_iou / count
-    val_iou_ssc, val_iou_ssc_mean = sscMetrics.get_iou(val_iou_ssc, val_cnt_class)
+    val_iou_ssc, val_iou_ssc_mean = sscMetrics.get_iou(
+        val_iou_ssc, val_cnt_class)
     calibration = np.zeros(_C+2, dtype=np.float64)
-    calibration[2:] = np.divide(calibration_occ, calibration_total)
+    calibration[2:] = np.divide(calibration_occ, calibration_total, out=np.zeros_like(
+        calibration_occ), where=calibration_total != 0)
     calibration[0] = calibration[2]
     calibration[1] = np.sum(calib_occ[1:]) / np.sum(calib_total[1:])
     return val_p, val_r, val_iou, val_acc, val_iou_ssc, val_iou_ssc_mean, calibration
@@ -238,8 +264,10 @@ def validate_on_batch(predict, target, nonempty=None):  # CPU
     y_true = target
     p, r, iou = sscMetrics.get_score_completion(y_pred, y_true, nonempty)
     #acc, iou_sum, cnt_class = sscMetrics.get_score_semantic_and_completion(y_pred, y_true, stsdf)
-    acc, iou_sum, cnt_class, tp_sum, fp_sum, fn_sum = sscMetrics.get_score_semantic_and_completion(y_pred, y_true, nonempty)
-    calib_occ, calib_total = sscMetrics.get_occupancy_calibration(y_pred, y_true)
+    acc, iou_sum, cnt_class, tp_sum, fp_sum, fn_sum = sscMetrics.get_score_semantic_and_completion(
+        y_pred, y_true, nonempty)
+    calib_occ, calib_total = sscMetrics.get_occupancy_calibration(
+        y_pred, y_true)
     # iou = np.divide(iou_sum, cnt_class)
     return p, r, iou, acc, iou_sum, cnt_class, calib_occ, calib_total
 

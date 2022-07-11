@@ -68,7 +68,7 @@ def test():
     v_prec, v_recall, v_iou, v_acc, v_ssc_iou, v_mean_iou, occupancy_calibration = validate_on_dataset_stsdf(net, val_loader)
     print('Validate with TSDF: p {:.1f}, r {:.1f}, IoU {:.1f}'.format(v_prec*100.0, v_recall*100.0, v_iou*100.0))
     print('pixel-acc {:.4f}, mean IoU {:.1f}, SSC IoU:{}'.format(v_acc*100.0, v_mean_iou*100.0, v_ssc_iou*100.0))
-    print(f"Occupancy calibration binary: {occupancy_calibration[0]:.3f} free, {occupancy_calibration[1]:.3f occ}.")
+    print(f"Occupancy calibration binary: {occupancy_calibration[0]:.3f} free, {occupancy_calibration[1]:.3f} occ.")
     print("Occupancy calibration semantic:")
     print(occupancy_calibration[2:])
 
