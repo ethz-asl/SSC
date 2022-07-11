@@ -247,10 +247,11 @@ def validate_on_dataset_stsdf(model, date_loader, save_ply=False):
     val_iou_ssc, val_iou_ssc_mean = sscMetrics.get_iou(
         val_iou_ssc, val_cnt_class)
     calibration = np.zeros(_C+2, dtype=np.float64)
-    calibration[2:] = np.divide(calibration_occ, calibration_total, out=np.zeros_like(
-        calibration_occ), where=calibration_total != 0)
+    calibration[2:] = np.divide(calibration_occ, calibration_total, out=np.zeros(
+        calibration_occ.shape, dtype=float), where=calibration_total != 0)
     calibration[0] = calibration[2]
-    calibration[1] = np.sum(calib_occ[1:]) / np.sum(calib_total[1:])
+    calibration[1] = np.sum(calibration_occ[1:]) / \
+        np.sum(calibration_total[1:])
     return val_p, val_r, val_iou, val_acc, val_iou_ssc, val_iou_ssc_mean, calibration
 
 

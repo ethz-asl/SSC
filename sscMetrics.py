@@ -76,10 +76,6 @@ def get_occupancy_calibration(predict, target):
             calib_total[label] = calib_total[label] + 1
             calib_occupied[label] = calib_occupied[label] + occupied[i,n]
 
-    print(calib_occupied)
-    print(calib_total)
-    print(np.divide(calib_occupied, calib_total, out=np.zeros(
-        calib_occupied.shape, dtype=float), where=calib_total != 0))
     return calib_occupied, calib_total
 
 
