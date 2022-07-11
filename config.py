@@ -6,8 +6,8 @@ class Path(object):
     def db_root_dir(dataset):
         if dataset == 'nyu':
             # folder that contains dataset/.
-            return {'train': '/home/mcheem/data/datasets/NYU_SSC/NYUtrain_npz',
-                    'val': '/home/mcheem/data/datasets/NYU_SSC/NYUtest_npz'}
+            return {'train': '/home/schmluk/data/NYUtrain_npz',
+                    'val': '/home/schmluk/data/NYUtest_npz'}
 
         elif dataset == 'nyucad':
             return {'train': '/home/jsg/jie/Data_zoo/NYU_SSC/NYUCADtrain_npz',

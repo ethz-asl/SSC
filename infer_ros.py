@@ -72,7 +72,7 @@ class ROSInfer:
         x_depth = Variable(depth.float()).to(self.device)
         position = position.long().to(self.device)
 
-        if self.args.model == 'palnet':
+        if self.args.model == 'palnet' or self.args.modle == 'palnet_ours':
             x_tsdf = Variable(tsdf.float()).to(self.device)
             y_pred = self.net(x_depth=x_depth, x_tsdf=x_tsdf, p=position)
         else:
@@ -80,7 +80,13 @@ class ROSInfer:
             y_pred = self.net(x_depth=x_depth, x_rgb=x_rgb, p=position)
 
         scores = torch.nn.Softmax(dim=0)(y_pred.squeeze())
-        preds = torch.argmax(scores, dim=0).cpu().numpy()
+        # Threshold max probs for encoding free space
+        max_prob = 1.0 - 1e-8
+        scores[scores> max_prob] = max_prob
+        free_space_confidence = scores[0]
+        
+        # Encode free space scores along with class id.
+        preds = torch.argmax(scores, dim=0).cpu().numpy() + free_space_confidence.detach().cpu().numpy()
 
         # setup message
         msg = SSCGrid()
@@ -149,7 +155,7 @@ class ROSInfer:
                             help='Output topic name to publish to (default: /ssc)')
         parser.add_argument('--world_frame', type=str, default='/odom',
                             help='world frame name (default: /odom)')
-        parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'palnet'],
+        parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'palnet', 'palnet_ours'],
                             help='model name (default: palnet)')
 
         parser.add_argument('--resume', type=str, metavar='PATH',
