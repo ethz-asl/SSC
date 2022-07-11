@@ -26,10 +26,11 @@ class ROSInfer:
     def __init__(self):
         self._load_arguments()
         self.net = make_model(self.args.model, num_classes=12)
-        self.depth_cam_frame = self.args.depth_cam_frame
+        self.input_topic_name = self.args.input_topic_name
+        self.output_topic_name = self.args.output_topic_name
         self.world_frame = self.args.world_frame
         self.listener = tf.TransformListener()
-        self.ssc_pub = rospy.Publisher('ssc', SSCGrid, queue_size=10)
+        self.ssc_pub = rospy.Publisher(self.output_topic_name, SSCGrid, queue_size=10)
         self.bridge = CvBridge()
 
     def start(self):
@@ -39,19 +40,19 @@ class ROSInfer:
         # load pretrained model
         self.load_network()
         self.depth_img_subscriber = rospy.Subscriber(
-            self.depth_cam_frame, Image, self.callback)
+            self.input_topic_name, Image, self.callback, queue_size=1)
+        print("SSC Inference setup successfully!")
 
     def callback(self, depth_image):
         """
         Receive a Depth image from the simulation, voxelize the depthmap as TSDF, 2D to 3D mapping
         and perform inference using 3D CNN. Publish the results as SSCGrid Message.
         """
-        
 
         # get depth camera pose wrt odom
         try:
             position, orientation = self.listener.lookupTransform(
-                self.world_frame, self.depth_cam_frame, depth_image.header.stamp)
+                self.world_frame, depth_image.header.frame_id, depth_image.header.stamp)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             return
 
@@ -79,9 +80,15 @@ class ROSInfer:
             y_pred = self.net(x_depth=x_depth, x_rgb=x_rgb, p=position)
 
         scores = torch.nn.Softmax(dim=0)(y_pred.squeeze())
-        preds = torch.argmax(scores, dim=0).cpu().numpy()
+        # Threshold max probs for encoding free space
+        max_prob = 1.0 - 1e-8
+        scores[scores> max_prob] = max_prob
+        free_space_confidence = scores[0]
+        
+        # Encode free space scores along with class id.
+        preds = torch.argmax(scores, dim=0).cpu().numpy() + free_space_confidence.detach().cpu().numpy()
 
-        #setup message
+        # setup message
         msg = SSCGrid()
         msg.header = depth_image.header
         msg.data = preds.reshape(-1).astype(np.float32).tolist()
@@ -122,14 +129,6 @@ class ROSInfer:
         """
         Loads a pretrained model for inference
         """
-        if os.path.isfile(self.args.resume):
-            print("=> loading checkpoint '{}'".format(self.args.resume))
-            cp_states = torch.load(self.args.resume, map_location=torch.device('cpu'))
-            self.net.load_state_dict(cp_states['state_dict'], strict=True)
-
-        else:
-            raise Exception("=> NO checkpoint found at '{}'".format(self.args.resume))
-
         if torch.cuda.is_available():
             print("CUDA device found!".format(torch.cuda.device_count()))
             self.device = torch.device('cuda')
@@ -137,15 +136,23 @@ class ROSInfer:
             print("Using CPU!")
             self.device = torch.device('cpu')
 
+        if os.path.isfile(self.args.resume):
+            print("=> loading checkpoint '{}'".format(self.args.resume))
+            cp_states = torch.load(
+                self.args.resume, map_location=torch.device('cpu'))
+            self.net.load_state_dict(cp_states['state_dict'], strict=True)
+        else:
+            raise Exception(
+                "=> NO checkpoint found at '{}'".format(self.args.resume))
         self.net = self.net.to(self.device)
-
-        # switch to test mode
         self.net.eval()
 
     def _load_arguments(self):
         parser = argparse.ArgumentParser(description='PyTorch SSC Inference')
-        parser.add_argument('--depth_cam_frame', type=str, default='/airsim_drone/Depth_cam',
-                            help='depth cam frame name (default: /airsim_drone/Depth_cam)')
+        parser.add_argument('--input_topic_name', type=str, default='/airsim_drone/Depth_cam',
+                            help='depth image topic to subscribe to (default: /airsim_drone/Depth_cam)')
+        parser.add_argument('--output_topic_name', type=str, default='/ssc',
+                            help='Output topic name to publish to (default: /ssc)')
         parser.add_argument('--world_frame', type=str, default='/odom',
                             help='world frame name (default: /odom)')
         parser.add_argument('--model', type=str, default='palnet', choices=['ddrnet', 'palnet'],
@@ -157,7 +164,10 @@ class ROSInfer:
 
         # use argparse arguments as default and override with ros params
         args.world_frame = rospy.get_param('~world_frame', args.world_frame)
-        args.depth_cam_frame = rospy.get_param('~depth_cam_frame', args.depth_cam_frame)
+        args.depth_cam_frame = rospy.get_param(
+            '~input_topic_name', args.input_topic_name)
+        args.depth_cam_frame = rospy.get_param(
+            '~output_topic_name', args.output_topic_name)
         args.model = rospy.get_param('~model', args.model)
         args.resume = rospy.get_param('~resume', args.resume)
         self.args = args
